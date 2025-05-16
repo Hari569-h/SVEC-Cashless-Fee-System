@@ -1231,7 +1231,7 @@ async function startOtpVerification(user) {
                 // Show message to get OTP
                 const phoneError = document.getElementById('display-phone-error');
                 if (phoneError) {
-                    phoneError.textContent = 'Click the button below to receive OTP';
+                    phoneError.textContent = 'Click the Above button to receive OTP';
                     phoneError.style.color = 'var(--primary)';
                     phoneError.classList.add('visible');
                 }
