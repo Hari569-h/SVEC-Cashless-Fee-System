@@ -1,0 +1,1120 @@
+// OTP Verification Module for Staff Login using Firebase Phone Authentication
+// This module handles phone number collection, OTP generation, and verification
+// Version 2.0 - Fixed OTP verification flow for staff login
+
+// Get Firebase Auth and Firestore instances from the global scope
+// Don't redeclare auth and db to avoid conflicts
+
+// For reCAPTCHA verification
+let recaptchaVerifier;
+
+// Configuration for OTP
+const OTP_EXPIRY_MINUTES = 5;
+const OTP_LENGTH = 6;
+
+// DOM Elements for OTP UI
+let otpVerificationContainer;
+let phoneNumberForm;
+let otpVerificationForm;
+let phoneInput;
+let otpInput;
+let otpMessage;
+let otpResendButton;
+let otpTimer;
+let otpCountdown;
+
+// Current OTP state
+let currentOTP = null;
+let otpExpiry = null;
+let verifiedUser = null;
+
+// Cache for user data to improve performance
+const userDataCache = {};
+
+// Initialize OTP verification UI
+function initOtpVerification() {
+    // Create and append OTP verification container if it doesn't exist
+    if (!document.getElementById('otp-verification-container')) {
+        createOtpVerificationUI();
+    }
+    
+    // Get references to DOM elements
+    otpVerificationContainer = document.getElementById('otp-verification-container');
+    phoneNumberForm = document.getElementById('phone-number-form');
+    otpVerificationForm = document.getElementById('otp-verification-form');
+    phoneInput = document.getElementById('phone-number');
+    otpInput = document.getElementById('otp-input');
+    otpMessage = document.getElementById('otp-message');
+    otpResendButton = document.getElementById('otp-resend');
+    otpTimer = document.getElementById('otp-timer');
+    otpCountdown = document.getElementById('otp-countdown');
+    
+    // Check if user has verified phone number before
+    async function checkPhoneVerificationStatus(userId) {
+        try {
+            // Check cache first for faster retrieval
+            if (userDataCache[userId]) {
+                console.log('Using cached user data for', userId);
+                return userDataCache[userId];
+            }
+            
+            // Get Firebase Firestore instance
+            const db = firebase.firestore();
+            
+            const doc = await db.collection('staff').doc(userId).get();
+            
+            if (doc.exists) {
+                const userData = doc.data();
+                console.log('User data from Firestore:', userData);
+                
+                // Create the result object
+                const result = {
+                    phoneNumber: userData.phoneNumber || null,
+                    hasVerifiedBefore: userData.otpVerified === true,
+                    lastVerified: userData.lastVerified || null
+                };
+                
+                // Save to cache
+                userDataCache[userId] = result;
+                
+                return result;
+            }
+            
+            return {
+                phoneNumber: null,
+                hasVerifiedBefore: false,
+                lastVerified: null
+            };
+        } catch (error) {
+            console.error('Error checking phone verification status:', error);
+            return {
+                phoneNumber: null,
+                hasVerifiedBefore: false,
+                lastVerified: null
+            };
+        }
+    }
+
+    // Add event listeners
+    phoneNumberForm.addEventListener('submit', handlePhoneNumberSubmit);
+    otpVerificationForm.addEventListener('submit', handleOtpVerification);
+    otpResendButton.addEventListener('click', handleOtpResend);
+    
+    // Format phone number as user types
+    if (phoneInput) {
+        phoneInput.addEventListener('input', formatPhoneNumber);
+    }
+}
+
+// Create OTP verification UI dynamically
+function createOtpVerificationUI() {
+    // Check if container already exists
+    if (document.getElementById('otp-verification-container')) {
+        return;
+    }
+    
+    const container = document.createElement('div');
+    container.id = 'otp-verification-container';
+    container.className = 'otp-verification-container hidden';
+    
+    container.innerHTML = `
+        <div class="otp-card">
+            <button type="button" class="otp-back-button" id="otp-back-button">
+                <i class="fas fa-arrow-left"></i> Back
+            </button>
+            
+            <h2 class="otp-title">Staff Verification</h2>
+            <p class="otp-subtitle">Two-factor authentication required for secure access</p>
+            
+            <!-- Phone Number Form (for first-time users) -->
+            <form id="phone-number-form">
+                <div class="form-group">
+                    <label for="phone-number">Mobile Number</label>
+                    <input type="tel" id="phone-number" name="phone-number" 
+                           placeholder="+91 9876543210" required
+                           pattern="\\+[0-9]{1,4}\\s[0-9]{10}">
+                    <small>Format: +91 9876543210 (with country code)</small>
+                    <p class="note">Note: Once verified, mobile number cannot be changed.</p>
+                </div>
+                <button type="submit" class="otp-btn">Send OTP</button>
+                <p id="phone-error" class="error-message"></p>
+            </form>
+            
+            <!-- Read-only Phone Number Display (for returning users) -->
+            <div id="phone-display" class="hidden">
+                <div class="form-group">
+                    <label>Your Registered Mobile Number</label>
+                    <div class="readonly-phone"><span id="display-phone-number"></span></div>
+                    <p class="note">This number cannot be changed after verification.</p>
+                </div>
+                <button id="send-otp-button" class="otp-btn">Send OTP</button>
+                <p id="display-phone-error" class="error-message"></p>
+            </div>
+            
+            <!-- OTP Verification Form -->
+            <form id="otp-verification-form" class="hidden">
+                <div class="form-group">
+                    <label for="otp-input">Enter 6-digit OTP</label>
+                    <input type="text" id="otp-input" name="otp-input" 
+                           placeholder="123456" required maxlength="6" pattern="[0-9]{6}"
+                           inputmode="numeric" autocomplete="one-time-code">
+                    <div class="otp-timer">
+                        <span id="otp-timer">OTP expires in <span id="otp-countdown">05:00</span></span>
+                    </div>
+                </div>
+                <button type="submit" class="otp-btn">Verify OTP</button>
+                <button type="button" id="otp-resend" class="otp-resend-btn">Resend OTP</button>
+                <p id="otp-message" class="error-message"></p>
+            </form>
+        </div>
+    `;
+    
+    document.body.appendChild(container);
+    
+    // Add back button functionality
+    document.getElementById('otp-back-button').addEventListener('click', () => {
+        hideOtpVerification();
+        showLoginForm();
+    });
+    
+    // Add send OTP button functionality for returning users
+    const sendOtpButton = document.getElementById('send-otp-button');
+    if (sendOtpButton) {
+        console.log('Adding event listener to send OTP button');
+        sendOtpButton.addEventListener('click', async () => {
+            console.log('Send OTP button clicked');
+            const phoneNumberElement = document.getElementById('display-phone-number');
+            
+            if (!phoneNumberElement) {
+                console.error('Phone number element not found');
+                return;
+            }
+            
+            const phoneNumber = phoneNumberElement.textContent;
+            console.log('Retrieved phone number:', phoneNumber);
+            
+            if (phoneNumber) {
+                try {
+                    // Show loading state
+                    const phoneError = document.getElementById('display-phone-error');
+                    if (phoneError) {
+                        phoneError.textContent = 'Sending OTP...';
+                        phoneError.style.color = 'var(--primary)';
+                        phoneError.classList.add('visible');
+                    }
+                    
+                    // Generate and send OTP
+                    console.log('Calling generateAndSendOTP with phone number:', phoneNumber);
+                    const otpSent = await generateAndSendOTP(phoneNumber);
+                    
+                    if (otpSent) {
+                        console.log('OTP sent successfully, showing verification form');
+                        // Show OTP verification form directly
+                        const phoneDisplay = document.getElementById('phone-display');
+                        if (phoneDisplay) {
+                            phoneDisplay.classList.add('hidden');
+                        }
+                        
+                        if (otpVerificationForm) {
+                            otpVerificationForm.classList.remove('hidden');
+                        } else {
+                            console.error('OTP verification form not found');
+                        }
+                    } else {
+                        console.error('Failed to send OTP');
+                        if (phoneError) {
+                            phoneError.textContent = 'Failed to send OTP. Please try again.';
+                            phoneError.style.color = 'var(--secondary)';
+                            phoneError.classList.add('visible');
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error sending OTP:', error);
+                    const phoneError = document.getElementById('display-phone-error');
+                    if (phoneError) {
+                        phoneError.textContent = 'Failed to send OTP. Please try again.';
+                        phoneError.style.color = 'var(--secondary)';
+                        phoneError.classList.add('visible');
+                    }
+                }
+            } else {
+                console.error('Phone number is empty');
+            }
+        });
+    } else {
+        console.error('Send OTP button not found');
+    }
+    
+    // Add CSS for the readonly phone display
+    const style = document.createElement('style');
+    style.textContent = `
+        .readonly-phone {
+            padding: var(--space-sm) var(--space-md);
+            border: 2px solid var(--gray-light);
+            border-radius: var(--radius-lg);
+            background-color: var(--gray-light);
+            font-weight: bold;
+            margin-bottom: var(--space-xs);
+        }
+        
+        .note {
+            font-size: 0.8rem;
+            color: var(--gray);
+            margin-top: 0.25rem;
+        }
+    `;
+    document.head.appendChild(style);
+}
+
+// Show OTP verification container and hide login form
+function showOtpVerification() {
+    document.querySelector('.login-card').classList.add('hidden');
+    otpVerificationContainer.classList.remove('hidden');
+}
+
+// Hide OTP verification container
+function hideOtpVerification() {
+    otpVerificationContainer.classList.add('hidden');
+    resetOtpForms();
+}
+
+// Show login form
+function showLoginForm() {
+    document.querySelector('.login-card').classList.remove('hidden');
+}
+
+// Reset OTP forms
+function resetOtpForms() {
+    phoneNumberForm.classList.remove('hidden');
+    otpVerificationForm.classList.add('hidden');
+    phoneInput.value = '';
+    otpInput.value = '';
+    otpMessage.textContent = '';
+    clearOtpTimer();
+}
+
+// Format phone number as user types
+function formatPhoneNumber() {
+    let value = phoneInput.value.replace(/\D/g, '');
+    
+    // Ensure it starts with a plus sign
+    if (value.length > 0 && !phoneInput.value.startsWith('+')) {
+        value = '+' + value;
+    }
+    
+    // Format with a space after country code
+    if (value.length > 3) {
+        const countryCode = value.substring(0, 3);
+        const number = value.substring(3);
+        value = countryCode + ' ' + number;
+    }
+    
+    phoneInput.value = value;
+}
+
+async function handlePhoneNumberSubmit(e) {
+    e.preventDefault();
+    
+    const phoneNumber = phoneInput.value.trim();
+    const phoneError = document.getElementById('phone-error');
+    
+    // Validate phone number
+    if (!phoneNumber) {
+        phoneError.textContent = 'Please enter a valid phone number';
+        phoneError.style.color = 'var(--secondary)';
+        phoneError.classList.add('visible');
+        return;
+    }
+    
+    try {
+        // Show loading state
+        phoneError.textContent = 'Sending OTP...';
+        phoneError.style.color = 'var(--primary)';
+        phoneError.classList.add('visible');
+        
+        // Save phone number to user profile in Firestore if it's not already saved
+        await savePhoneNumber(verifiedUser.uid, phoneNumber);
+        
+        // Generate and send OTP
+        const otpSent = await generateAndSendOTP(phoneNumber);
+        
+        if (otpSent) {
+            // Show OTP verification form
+            phoneNumberForm.classList.add('hidden');
+            otpVerificationForm.classList.remove('hidden');
+            
+            // Start OTP timer
+            startOtpTimer();
+            
+            console.log('Phone number saved and OTP sent');
+        } else {
+            phoneError.textContent = 'Failed to send OTP. Please try again.';
+            phoneError.style.color = 'var(--secondary)';
+            phoneError.classList.add('visible');
+        }
+    } catch (error) {
+        console.error('Error sending OTP:', error);
+        phoneError.textContent = 'Failed to send OTP. Please try again.';
+        phoneError.style.color = 'var(--secondary)';
+        phoneError.classList.add('visible');
+    }
+}
+
+// Save phone number to user profile in Firestore
+async function savePhoneNumber(userId, phoneNumber) {
+    try {
+        // Get Firebase Firestore instance
+        const db = firebase.firestore();
+        
+        // First check if user already has a verified phone number
+        const doc = await db.collection('staff').doc(userId).get();
+        
+        if (doc.exists && doc.data().phoneNumber && doc.data().otpVerified === true) {
+            // If user already has a verified phone number, don't update it
+            console.log('User already has a verified phone number, not updating');
+            return doc.data().phoneNumber; // Return the existing phone number
+        }
+        
+        // Otherwise, save the new phone number
+        await db.collection('staff').doc(userId).set({
+            phoneNumber: phoneNumber,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+        
+        console.log('Phone number saved successfully');
+        return phoneNumber; // Return the new phone number
+    } catch (error) {
+        console.error('Error saving phone number:', error);
+        throw error;
+    }
+}
+
+// Check if user has a phone number saved
+async function checkPhoneNumber(userId) {
+    try {
+        // Check cache first for faster retrieval
+        if (userDataCache[userId] && userDataCache[userId].phoneNumber) {
+            console.log('Using cached phone number for', userId);
+            return userDataCache[userId].phoneNumber;
+        }
+        
+        // Get Firebase Firestore instance
+        const db = firebase.firestore();
+        
+        const doc = await db.collection('staff').doc(userId).get();
+        
+        if (doc.exists && doc.data().phoneNumber) {
+            // Save to cache
+            if (!userDataCache[userId]) {
+                userDataCache[userId] = {};
+            }
+            userDataCache[userId].phoneNumber = doc.data().phoneNumber;
+            
+            return doc.data().phoneNumber;
+        }
+        
+        return null;
+    } catch (error) {
+        console.error('Error checking phone number:', error);
+        return null;
+    }
+}
+
+// Generate and send OTP (using reliable fallback method)
+async function generateAndSendOTP(phoneNumber) {
+    try {
+        console.log('Starting OTP generation for phone:', phoneNumber);
+        
+        // Format phone number if needed (strip any spaces or special characters)
+        phoneNumber = phoneNumber.replace(/\s+/g, '').trim();
+        
+        // Ensure it has a country code
+        if (!phoneNumber.startsWith('+')) {
+            phoneNumber = '+' + phoneNumber;
+        }
+        
+        console.log('Formatted phone number for OTP:', phoneNumber);
+        
+        // Generate a random 6-digit OTP
+        currentOTP = Math.floor(100000 + Math.random() * 900000).toString();
+        
+        // Set OTP expiry time (5 minutes from now)
+        otpExpiry = new Date();
+        otpExpiry.setMinutes(otpExpiry.getMinutes() + OTP_EXPIRY_MINUTES);
+        
+        console.log(`Generated OTP for ${phoneNumber}: ${currentOTP}`);
+        
+        // Save OTP to user profile in Firestore
+        if (verifiedUser) {
+            try {
+                // Get Firebase Firestore instance
+                const db = firebase.firestore();
+                
+                console.log('Saving OTP to Firestore for user:', verifiedUser.uid);
+                
+                // Update the document with the new OTP
+                await db.collection('staff').doc(verifiedUser.uid).set({
+                    phoneNumber: phoneNumber,
+                    currentOTP: currentOTP,  // In production, use a more secure method
+                    otpExpiry: firebase.firestore.FieldValue.serverTimestamp(),
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                }, { merge: true });
+                
+                console.log('OTP saved to Firestore successfully');
+            } catch (firestoreError) {
+                console.error('Error saving OTP to Firestore:', firestoreError);
+            }
+        } else {
+            console.error('No verified user found when generating OTP');
+        }
+        
+        // Show the OTP in the message area for demo purposes
+        if (otpMessage) {
+            otpMessage.textContent = `Demo Mode: Your OTP is ${currentOTP}`;
+            otpMessage.style.color = 'var(--primary)';
+            otpMessage.classList.add('visible');
+            console.log('OTP message displayed in UI');
+        } else {
+            console.error('OTP message element not found');
+        }
+        
+        // Start OTP timer
+        startOtpTimer();
+        
+        console.log(`OTP generation complete for ${phoneNumber}`);
+        return true;
+    } catch (error) {
+        console.error('Error generating OTP:', error);
+        if (otpMessage) {
+            otpMessage.textContent = `Error: ${error.message}`;
+            otpMessage.style.color = 'var(--secondary)';
+            otpMessage.classList.add('visible');
+        }
+        return false;
+    }
+}
+
+// Handle OTP verification (simple and reliable method)
+async function handleOtpVerification(e) {
+    e.preventDefault();
+    
+    const enteredOTP = otpInput.value.trim();
+    
+    // Validate OTP
+    if (!enteredOTP || enteredOTP.length !== OTP_LENGTH) {
+        otpMessage.textContent = `Please enter a valid ${OTP_LENGTH}-digit OTP`;
+        otpMessage.style.color = 'var(--secondary)';
+        otpMessage.classList.add('visible'); // Make sure error is visible
+        return;
+    }
+    
+    try {
+        // Show loading state
+        otpMessage.textContent = 'Verifying OTP...';
+        otpMessage.style.color = 'var(--primary)';
+        otpMessage.classList.add('visible');
+        
+        // Check if OTP is expired
+        if (new Date() > otpExpiry) {
+            otpMessage.textContent = 'OTP has expired. Please request a new one.';
+            otpMessage.style.color = 'var(--secondary)';
+            otpMessage.classList.add('visible');
+            return;
+        }
+        
+        console.log('Entered OTP:', enteredOTP);
+        console.log('Current OTP:', currentOTP);
+        
+        // Verify OTP against the generated OTP
+        if (enteredOTP === currentOTP) {
+            console.log('OTP verification successful');
+            
+            // Mark OTP as verified in Firestore
+            if (verifiedUser) {
+                // Get Firebase Firestore instance
+                const db = firebase.firestore();
+                
+                await db.collection('staff').doc(verifiedUser.uid).set({
+                    otpVerified: true,
+                    lastVerified: firebase.firestore.FieldValue.serverTimestamp()
+                }, { merge: true });
+                
+                console.log('User marked as verified in Firestore');
+            }
+            
+            // Show success message
+            otpMessage.textContent = 'Mobile verified successfully! Redirecting...';
+            otpMessage.style.color = 'green';
+            otpMessage.classList.add('visible');
+            
+            // Redirect to dashboard after a short delay
+            setTimeout(() => {
+                window.location.href = 'staff_dashboard.html';
+            }, 1500);
+        } else {
+            console.log('OTP verification failed');
+            
+            // Make the error message more prominent
+            otpMessage.textContent = 'Invalid OTP. Please try again.';
+            otpMessage.style.color = 'red';
+            otpMessage.classList.add('visible');
+            
+            // Shake the input field to indicate error
+            otpInput.classList.add('shake');
+            setTimeout(() => {
+                otpInput.classList.remove('shake');
+            }, 500);
+        }
+    } catch (error) {
+        console.error('Error verifying OTP:', error);
+        otpMessage.textContent = `Error: ${error.message}`;
+        otpMessage.style.color = 'var(--secondary)';
+        otpMessage.classList.add('visible');
+    }
+}
+
+// Handle OTP resend
+async function handleOtpResend() {
+    try {
+        // Get the phone number from Firestore
+        if (verifiedUser) {
+            const phoneNumber = await checkPhoneNumber(verifiedUser.uid);
+            
+            if (phoneNumber) {
+                // Generate and send new OTP
+                await generateAndSendOTP(phoneNumber);
+                
+                // Restart OTP timer
+                startOtpTimer();
+                
+                // Show success message
+                otpMessage.textContent = 'New OTP sent successfully!';
+                otpMessage.style.color = 'var(--primary)';
+            } else {
+                otpMessage.textContent = 'Phone number not found. Please go back and enter your phone number.';
+                otpMessage.style.color = '';
+            }
+        }
+    } catch (error) {
+        console.error('Error resending OTP:', error);
+        otpMessage.textContent = 'Failed to resend OTP. Please try again.';
+        otpMessage.style.color = '';
+    }
+}
+
+// Start OTP timer
+function startOtpTimer() {
+    // Set timer for 5 minutes
+    let timeLeft = OTP_EXPIRY_MINUTES * 60;
+    
+    // Update timer every second
+    const timerInterval = setInterval(() => {
+        // Calculate minutes and seconds
+        const minutes = Math.floor(timeLeft / 60);
+        const seconds = timeLeft % 60;
+        
+        // Display time in MM:SS format
+        otpCountdown.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        
+        // Decrease time left
+        timeLeft--;
+        
+        // If timer expires, clear interval and show message
+        if (timeLeft < 0) {
+            clearInterval(timerInterval);
+            otpCountdown.textContent = '00:00';
+            otpMessage.textContent = 'OTP has expired. Please request a new one.';
+            otpMessage.style.color = '';
+        }
+    }, 1000);
+    
+    // Save interval ID for clearing later
+    otpTimer._intervalId = timerInterval;
+}
+
+// Clear OTP timer
+function clearOtpTimer() {
+    if (otpTimer && otpTimer._intervalId) {
+        clearInterval(otpTimer._intervalId);
+        otpTimer._intervalId = null;
+    }
+}
+
+// Check if user needs OTP verification
+async function checkOtpVerificationNeeded(user) {
+    try {
+        if (!user || !user.uid) {
+            console.error('Invalid user object');
+            return true;
+        }
+        
+        console.log('Checking if OTP verification is needed for user:', user.uid);
+        
+        // Get Firebase Firestore instance
+        const db = firebase.firestore();
+        
+        // Get user document from Firestore
+        const doc = await db.collection('staff').doc(user.uid).get();
+        
+        // If user document doesn't exist, verification is needed
+        if (!doc.exists) {
+            console.log('User document does not exist, first-time login - verification needed');
+            return true;
+        }
+        
+        const userData = doc.data();
+        console.log('User data retrieved:', userData);
+        
+        // For security, we always require OTP verification on login
+        // But we'll show different UI for first-time vs. returning users
+        return true;
+    } catch (error) {
+        console.error('Error checking OTP verification:', error);
+        // Default to requiring verification if there's an error
+        return true;
+    }
+}
+
+// Start OTP verification process
+async function startOtpVerification(user) {
+    // Save user for later use
+    verifiedUser = user;
+    console.log('Starting OTP verification for user:', user.uid);
+    
+    // Initialize OTP verification UI
+    initOtpVerification();
+    
+    // Show OTP verification container
+    showOtpVerification();
+    
+    try {
+        // Get the phone display and phone number form elements
+        const phoneDisplay = document.getElementById('phone-display');
+        if (!phoneDisplay) {
+            console.error('Phone display element not found');
+            return;
+        }
+        
+        // Get user data directly from Firestore
+        const db = firebase.firestore();
+        console.log('Fetching user data from Firestore for user:', user.uid);
+        const userDoc = await db.collection('staff').doc(user.uid).get();
+        
+        if (userDoc.exists) {
+            const userData = userDoc.data();
+            console.log('User data retrieved from Firestore:', userData);
+            
+            // Check if user has a phone number (returning user)
+            if (userData.phoneNumber) {
+                console.log('Returning user with phone number:', userData.phoneNumber);
+                
+                // Show the verified phone number UI (read-only)
+                phoneNumberForm.classList.add('hidden');
+                phoneDisplay.classList.remove('hidden');
+                otpVerificationForm.classList.add('hidden');
+                
+                // Display the phone number
+                const displayPhoneElement = document.getElementById('display-phone-number');
+                if (displayPhoneElement) {
+                    displayPhoneElement.textContent = userData.phoneNumber;
+                    console.log('Displayed phone number:', userData.phoneNumber);
+                } else {
+                    console.error('Display phone number element not found');
+                }
+                
+                // Show message to get OTP
+                const phoneError = document.getElementById('display-phone-error');
+                if (phoneError) {
+                    phoneError.textContent = 'Click the button below to receive OTP';
+                    phoneError.style.color = 'var(--primary)';
+                    phoneError.classList.add('visible');
+                    console.log('Phone error message displayed');
+                } else {
+                    console.error('Phone error element not found');
+                }
+                
+                return;
+            } else {
+                // First-time user without a phone number
+                console.log('First-time user, showing phone number form');
+                phoneNumberForm.classList.remove('hidden');
+                phoneDisplay.classList.add('hidden');
+                otpVerificationForm.classList.add('hidden');
+                
+                // Show message to enter phone number
+                const phoneError = document.getElementById('phone-error');
+                if (phoneError) {
+                    phoneError.textContent = 'Please enter your mobile number for verification';
+                    phoneError.style.color = 'var(--primary)';
+                    phoneError.classList.add('visible');
+                }
+            }
+            
+            // If user has an unverified phone number
+            if (userData.phoneNumber) {
+                console.log('User has unverified phone number:', userData.phoneNumber);
+                
+                // Pre-fill the phone number
+                phoneNumberForm.classList.remove('hidden');
+                phoneDisplay.classList.add('hidden');
+                otpVerificationForm.classList.add('hidden');
+                
+                document.getElementById('phone-number').value = userData.phoneNumber;
+                
+                // Show message to verify phone number
+                const phoneError = document.getElementById('phone-error');
+                if (phoneError) {
+                    phoneError.textContent = 'Please verify your mobile number';
+                    phoneError.style.color = 'var(--primary)';
+                    phoneError.classList.add('visible');
+                }
+                
+                console.log('Found unverified number, pre-filling:', userData.phoneNumber);
+                return;
+            }
+        }
+        
+        // If no phone number exists or user document doesn't exist
+        console.log('User has no phone number');
+        phoneNumberForm.classList.remove('hidden');
+        phoneDisplay.classList.add('hidden');
+        otpVerificationForm.classList.add('hidden');
+        
+        // Show message to enter phone number
+        const phoneError = document.getElementById('phone-error');
+        if (phoneError) {
+            phoneError.textContent = 'Please enter your mobile number for verification';
+            phoneError.style.color = 'var(--primary)';
+            phoneError.classList.add('visible');
+        }
+        
+        console.log('No phone number found, showing phone number form');
+    } catch (error) {
+        console.error('Error in startOtpVerification:', error);
+        // Default to showing phone number form on error
+        phoneNumberForm.classList.remove('hidden');
+        document.getElementById('phone-display').classList.add('hidden');
+        otpVerificationForm.classList.add('hidden');
+    }
+}
+// Add CSS for OTP verification
+function addOtpStyles() {
+    // Create style element if it doesn't exist
+    if (!document.getElementById('otp-styles')) {
+        const style = document.createElement('style');
+        style.id = 'otp-styles';
+        
+        style.textContent = `
+            .otp-verification-container {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                background-color: rgba(0, 0, 0, 0.5);
+                z-index: 1000;
+            }
+            
+            .otp-card {
+                background-color: var(--light);
+                border-radius: var(--radius-lg);
+                box-shadow: var(--shadow-xl);
+                padding: var(--space-xl);
+                width: 90%;
+                max-width: 450px;
+                position: relative;
+            }
+            
+            .otp-back-button {
+                position: absolute;
+                top: var(--space-md);
+                left: var(--space-md);
+                background: none;
+                border: none;
+                color: var(--gray);
+                cursor: pointer;
+                font-size: var(--text-sm);
+                display: flex;
+                align-items: center;
+                gap: var(--space-2xs);
+            }
+            
+            .otp-back-button:hover {
+                color: var(--primary);
+            }
+            
+            .otp-title {
+                font-family: var(--font-display);
+                font-size: var(--text-xl);
+                color: var(--dark);
+                margin-bottom: var(--space-xs);
+                text-align: center;
+                margin-top: var(--space-lg);
+            }
+            
+            .otp-subtitle {
+                color: var(--gray);
+                text-align: center;
+                margin-bottom: var(--space-lg);
+            }
+            
+            .otp-btn {
+                width: 100%;
+                padding: var(--space-sm) var(--space-md);
+                background-color: var(--primary);
+                color: var(--light);
+                border: none;
+                border-radius: var(--radius-md);
+                font-weight: 600;
+                cursor: pointer;
+                transition: all 0.3s ease;
+                margin-top: var(--space-md);
+            }
+            
+            .otp-btn:hover {
+                background-color: var(--primary-dark);
+                transform: translateY(-2px);
+            }
+            
+            .otp-timer {
+                display: flex;
+                justify-content: flex-end;
+                margin-top: var(--space-2xs);
+                font-size: var(--text-xs);
+                color: var(--gray);
+            }
+            
+            .otp-resend-btn {
+                background: none;
+                border: none;
+                color: var(--primary);
+                cursor: pointer;
+                font-size: var(--text-sm);
+                margin-top: var(--space-sm);
+                text-align: center;
+                width: 100%;
+            }
+            
+            .otp-resend-btn:hover {
+                text-decoration: underline;
+            }
+            
+            .shake {
+                animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+                border-color: red !important;
+            }
+            
+            @keyframes shake {
+                10%, 90% { transform: translate3d(-1px, 0, 0); }
+                20%, 80% { transform: translate3d(2px, 0, 0); }
+                30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+                40%, 60% { transform: translate3d(4px, 0, 0); }
+            }
+            
+            .hidden {
+                display: none !important;
+            }
+            
+            /* Dark mode support */
+            .dark-mode .otp-card {
+                background-color: var(--dark);
+                color: var(--light);
+            }
+            
+            .dark-mode .otp-title {
+                color: var(--light);
+            }
+            
+            .dark-mode .otp-back-button {
+                color: var(--gray-light);
+            }
+            
+            .dark-mode .otp-back-button:hover {
+                color: var(--primary-light);
+            }
+        `;
+        
+        .otp-back-button {
+            position: absolute;
+            top: var(--space-md);
+            left: var(--space-md);
+            background: none;
+            border: none;
+            color: var(--gray);
+            cursor: pointer;
+            font-size: var(--text-sm);
+            display: flex;
+            align-items: center;
+            gap: var(--space-2xs);
+        }
+        
+        .otp-back-button:hover {
+            color: var(--primary);
+        }
+        
+        .otp-title {
+            font-family: var(--font-display);
+            font-size: var(--text-xl);
+            color: var(--dark);
+            margin-bottom: var(--space-xs);
+            text-align: center;
+            margin-top: var(--space-lg);
+        }
+        
+        .otp-subtitle {
+            color: var(--gray);
+            text-align: center;
+            margin-bottom: var(--space-lg);
+        }
+        
+        .otp-btn {
+            width: 100%;
+            padding: var(--space-sm) var(--space-md);
+            background-color: var(--primary);
+            color: var(--light);
+            border: none;
+            border-radius: var(--radius-md);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: var(--space-md);
+        }
+        
+        .otp-btn:hover {
+            background-color: var(--primary-dark);
+            transform: translateY(-2px);
+        }
+        
+        .otp-timer {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: var(--space-2xs);
+            font-size: var(--text-xs);
+            color: var(--gray);
+        }
+        
+        .otp-resend-btn {
+            background: none;
+            border: none;
+            color: var(--primary);
+            cursor: pointer;
+            font-size: var(--text-sm);
+            margin-top: var(--space-sm);
+            text-align: center;
+            width: 100%;
+        }
+        
+        .otp-resend-btn:hover {
+            text-decoration: underline;
+        }
+        
+        .shake {
+            animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+            border-color: red !important;
+        }
+        
+        @keyframes shake {
+            10%, 90% { transform: translate3d(-1px, 0, 0); }
+            20%, 80% { transform: translate3d(2px, 0, 0); }
+            30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+            40%, 60% { transform: translate3d(4px, 0, 0); }
+        }
+        
+        .hidden {
+            display: none !important;
+        }
+        
+        /* Dark mode support */
+        .dark-mode .otp-card {
+            background-color: var(--dark);
+            color: var(--light);
+        }
+        
+        .dark-mode .otp-title {
+            color: var(--light);
+        }
+        
+        .dark-mode .otp-back-button {
+            color: var(--gray-light);
+        }
+        
+        .dark-mode .otp-back-button:hover {
+            color: var(--primary-light);
+        }
+    `;
+    
+    document.head.appendChild(style);
+}
+
+// Initialize OTP verification UI
+function initOtpVerification() {
+    // Initialize OTP verification UI here
+}
+
+// Create OTP Handler object for external use
+const OtpHandler = {
+    // Add OTP styles
+    addOtpStyles,
+    
+    // Initialize OTP verification
+    initOtpVerification,
+    
+    // Check if OTP verification is needed and start the process
+    checkAndStartVerification: async function(user) {
+        try {
+            console.log('Starting OTP verification flow for user:', user.uid);
+            
+            // Get Firebase Firestore instance
+            const db = firebase.firestore();
+            
+            // First, check if the user exists in the staff collection
+            const userDoc = await db.collection('staff').doc(user.uid).get();
+            
+            if (!userDoc.exists) {
+                // First-time user - create a new document for them
+                console.log('First-time user, creating staff document');
+                await db.collection('staff').doc(user.uid).set({
+                    email: user.email,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    otpVerified: false
+                });
+            }
+            
+            // Always require OTP verification for security
+            await startOtpVerification(user);
+            
+        } catch (error) {
+            console.error('Error in OTP verification flow:', error);
+            // Show error to user
+            alert('Error in verification process. Please try again.');
+        }
+    }
+};
+
+// Initialize OTP verification when the script loads
+document.addEventListener('DOMContentLoaded', function()) {
+    // Add OTP styles
+    OtpHandler.addOtpStyles();
+    
+    // Initialize OTP verification UI
+    OtpHandler.initOtpVerification();
+    
+    console.log('OTP verification module initialized');
+}
+    // Check if we're on the login page
+    if (window.location.pathname.endsWith('index.html')) {
+        // Add OTP styles
+        OtpHandler.addOtpStyles();
+        
+        // Initialize OTP verification UI
+        OtpHandler.initOtpVerification();
+        
+        console.log('OTP verification module initialized');
+    }
+});
+
+// Make OtpHandler globally available
+window.OtpHandler = OtpHandler;

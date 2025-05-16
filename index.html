@@ -1,0 +1,943 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Staff Login - SVEC Fee Management</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600&display=swap">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <link rel="stylesheet" href="otp-verification.css">
+    <style>
+        /* 2025 Design System - Desktop Focus */
+        :root {
+            /* 2025 Color Palette */
+            --primary: #006B54;        /* Deep Emerald */
+            --primary-dark: #004D3A;
+            --primary-light: #E0F2EC;
+            --secondary: #9E1B32;      /* Academic Crimson */
+            --secondary-light: #F8E8EB;
+            --accent: #D4AF37;         /* Gold */
+            --accent-light: #F5E9C8;
+            --dark: #1A1A1A;           /* Rich Black */
+            --light: #FDFDFD;          /* Pure White */
+            --gray: #6B7280;
+            --gray-light: #F3F4F6;
+
+            /* 2025 Typography */
+            --font-main: 'Inter', sans-serif;
+            --font-display: 'Playfair Display', serif;
+
+            /* 2025 Spacing System */
+            --space-3xs: 0.25rem;      /* 4px */
+            --space-2xs: 0.5rem;       /* 8px */
+            --space-xs: 0.75rem;       /* 12px */
+            --space-sm: 1rem;          /* 16px */
+            --space-md: 1.5rem;        /* 24px */
+            --space-lg: 2rem;          /* 32px */
+            --space-xl: 3rem;          /* 48px */
+            --space-2xl: 4rem;         /* 64px */
+            --space-3xl: 6rem;         /* 96px */
+
+            /* 2025 Border Radius */
+            --radius-sm: 0.25rem;      /* 4px */
+            --radius-md: 0.5rem;       /* 8px */
+            --radius-lg: 1rem;         /* 16px */
+            --radius-xl: 2rem;         /* 32px */
+            --radius-round: 50%;
+
+            /* 2025 Shadows */
+            --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+
+            /* 2025 Animation */
+            --transition-fast: 0.15s ease;
+            --transition-normal: 0.3s ease;
+            --transition-slow: 0.5s ease;
+
+            /* Dark Mode Variables */
+            --dark-bg: #121212;
+            --dark-surface: #1E1E1E;
+            --dark-text: #E0E0E0;
+            --dark-border: #333333;
+        }
+
+        /* Base Styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--font-main);
+            color: var(--dark);
+            background-color: var(--light);
+            line-height: 1.6;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+            transition: background-color var(--transition-normal), color var(--transition-normal);
+        }
+
+        /* Dark Mode */
+        body.dark-mode {
+            background-color: var(--dark-bg);
+            color: var(--dark-text);
+        }
+
+        /* 2025 Cursor Styles */
+        body {
+            cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="%23006B54" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20L12 4L4 20"/></svg>'), auto;
+        }
+
+        a, button, input[type="submit"], input[type="button"], .clickable {
+            cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="%239E1B32" stroke="%23FFFFFF" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/></svg>'), pointer;
+        }
+
+        /* Full-Page Header with Organic Shapes */
+        .header-container {
+            position: relative;
+            height: 40vh;
+            min-height: 400px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--light);
+            text-align: center;
+            padding: var(--space-2xl);
+            clip-path: polygon(0 0, 100% 0, 100% 85%, 0 100%);
+        }
+
+        .header-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" opacity="0.05"><path d="M0,100 C150,200 350,0 500,100 C650,200 750,0 800,100 L800,600 L0,600 Z" fill="%23D4AF37"/></svg>');
+            background-size: cover;
+            background-position: bottom;
+            z-index: 1;
+        }
+
+        .header-content {
+            position: relative;
+            z-index: 2;
+            max-width: 800px;
+        }
+
+        .university-logo {
+            width: 120px;
+            height: 120px;
+            margin: 0 auto var(--space-lg);
+            background: var(--light);
+            border-radius: var(--radius-round);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: var(--shadow-xl);
+            border: 4px solid var(--accent);
+            transition: transform var(--transition-normal);
+        }
+
+        .university-logo:hover {
+            transform: rotate(15deg) scale(1.05);
+        }
+
+        .university-logo::after {
+            content: 'SVEC';
+            color: var(--primary);
+            font-family: var(--font-display);
+            font-weight: 700;
+            font-size: 1.8rem;
+            letter-spacing: 1.5px;
+        }
+
+        .header-title {
+            font-family: var(--font-display);
+            font-size: 3rem;
+            font-weight: 600;
+            margin-bottom: var(--space-sm);
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .header-subtitle {
+            font-size: 1.25rem;
+            opacity: 0.9;
+            margin-bottom: var(--space-md);
+        }
+
+        /* Main Content with Parallax Effect */
+        .main-content {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: var(--space-2xl);
+            position: relative;
+            z-index: 2;
+            margin-top: -5vh;
+        }
+
+        /* Login Card with 2025 Glassmorphism */
+        .login-container {
+            width: 100%;
+            max-width: 500px;
+            perspective: 1000px;
+        }
+
+        .login-card {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border-radius: var(--radius-xl);
+            padding: var(--space-2xl);
+            box-shadow: var(--shadow-xl);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transform-style: preserve-3d;
+            transition: transform var(--transition-normal), box-shadow var(--transition-normal), background-color var(--transition-normal), border-color var(--transition-normal);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .dark-mode .login-card {
+            background: rgba(30, 30, 30, 0.85);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .login-card::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(
+                to bottom right,
+                rgba(214, 175, 55, 0.1) 0%,
+                rgba(158, 27, 50, 0.1) 50%,
+                rgba(0, 107, 84, 0.1) 100%
+            );
+            transform: rotate(30deg);
+            z-index: -1;
+            animation: gradientFlow 15s ease infinite;
+        }
+
+        @keyframes gradientFlow {
+            0% { transform: rotate(30deg) translate(-10%, -10%); }
+            50% { transform: rotate(30deg) translate(10%, 10%); }
+            100% { transform: rotate(30deg) translate(-10%, -10%); }
+        }
+
+        .login-card:hover {
+            transform: translateY(-5px) rotateX(5deg);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        }
+
+        .portal-title {
+            font-family: var(--font-display);
+            font-size: 1.75rem;
+            color: var(--primary);
+            margin-bottom: var(--space-xl);
+            text-align: center;
+            position: relative;
+            display: inline-block;
+            width: 100%;
+        }
+
+        .dark-mode .portal-title {
+            color: var(--accent-light);
+        }
+
+        .portal-title::before,
+        .portal-title::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            width: 30%;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--accent), transparent);
+        }
+
+        .portal-title::before {
+            left: 0;
+        }
+
+        .portal-title::after {
+            right: 0;
+        }
+
+        /* Form Elements with Micro-interactions */
+        .form-group {
+            margin-bottom: var(--space-lg);
+            position: relative;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: var(--space-xs);
+            color: var(--dark);
+            font-weight: 500;
+            font-size: 0.95rem;
+            transition: color var(--transition-fast);
+        }
+
+        .dark-mode .form-group label {
+            color: var(--dark-text);
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: var(--space-sm) var(--space-md);
+            border: 2px solid var(--gray-light);
+            border-radius: var(--radius-lg);
+            font-size: 1rem;
+            background-color: rgba(255, 255, 255, 0.8);
+            transition: all var(--transition-normal);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .dark-mode .form-group input {
+            background-color: rgba(30, 30, 30, 0.8);
+            border-color: var(--dark-border);
+            color: var(--dark-text);
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(0, 107, 84, 0.2);
+            background-color: var(--light);
+        }
+
+        .dark-mode .form-group input:focus {
+            background-color: rgba(30, 30, 30, 0.9);
+            box-shadow: 0 0 0 3px rgba(0, 107, 84, 0.4);
+        }
+
+        .password-container {
+            position: relative;
+        }
+
+        .toggle-password {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: var(--gray);
+            cursor: pointer;
+            font-size: 14px;
+            padding: 5px;
+            border-radius: 50%;
+            transition: all var(--transition-fast);
+            line-height: 1;
+            height: 24px;
+            width: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .toggle-password:hover {
+            color: var(--primary);
+            background-color: var(--primary-light);
+        }
+
+        .dark-mode .toggle-password:hover {
+            background-color: rgba(0, 107, 84, 0.3);
+        }
+
+        /* Form Footer */
+        .form-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: var(--space-lg) 0 var(--space-md);
+        }
+
+        .remember-me {
+            display: flex;
+            align-items: center;
+        }
+
+        .remember-me input {
+            width: auto;
+            margin-right: var(--space-xs);
+            accent-color: var(--primary);
+        }
+
+        .forgot-password a {
+            color: var(--primary);
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: color var(--transition-fast);
+            position: relative;
+        }
+
+        .dark-mode .forgot-password a {
+            color: var(--accent-light);
+        }
+
+        .forgot-password a::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            width: 0;
+            height: 1px;
+            background-color: var(--primary);
+            transition: width var(--transition-normal);
+        }
+
+        .dark-mode .forgot-password a::after {
+            background-color: var(--accent-light);
+        }
+
+        .forgot-password a:hover {
+            color: var(--primary-dark);
+        }
+
+        .dark-mode .forgot-password a:hover {
+            color: var(--accent);
+        }
+
+        .forgot-password a:hover::after {
+            width: 100%;
+        }
+
+        /* Login Button with 2025 Neumorphism */
+        .login-btn {
+            width: 100%;
+            padding: var(--space-sm) var(--space-xl);
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: var(--light);
+            border: none;
+            border-radius: var(--radius-lg);
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all var(--transition-normal);
+            box-shadow:
+                0 4px 6px rgba(0, 0, 0, 0.1),
+                0 1px 3px rgba(0, 0, 0, 0.08),
+                inset 0 1px 1px rgba(255, 255, 255, 0.2);
+            position: relative;
+            overflow: hidden;
+            z-index: 1;
+        }
+
+        .login-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 100%);
+            opacity: 0;
+            transition: opacity var(--transition-normal);
+            z-index: -1;
+        }
+
+        .login-btn:hover {
+            transform: translateY(-2px);
+            box-shadow:
+                0 10px 15px rgba(0, 0, 0, 0.1),
+                0 4px 6px rgba(0, 0, 0, 0.05),
+                inset 0 1px 1px rgba(255, 255, 255, 0.2);
+        }
+
+        .login-btn:hover::before {
+            opacity: 1;
+        }
+
+        .login-btn:active {
+            transform: translateY(0);
+        }
+
+        /* Dark Mode Toggle */
+        .dark-mode-toggle {
+            position: absolute;
+            top: var(--space-lg);
+            right: var(--space-lg);
+            width: 50px;
+            height: 24px;
+            background: var(--gray-light);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: background var(--transition-normal);
+            z-index: 100;
+        }
+
+        .dark-mode .dark-mode-toggle {
+            background: var(--dark-surface);
+        }
+
+        .dark-mode-toggle::before {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 20px;
+            height: 20px;
+            background: var(--light);
+            border-radius: 50%;
+            transition: transform var(--transition-normal);
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+        }
+
+        .dark-mode .dark-mode-toggle::before {
+            transform: translateX(26px);
+            background: var(--accent);
+        }
+
+        /* Message with Animation */
+        .error-message {
+            color: var(--secondary);
+            margin-top: var(--space-md);
+            text-align: center;
+            font-size: 0.9rem;
+            padding: var(--space-sm);
+            background: var(--secondary-light);
+            border-radius: var(--radius-md);
+            border: 1px solid rgba(158, 27, 50, 0.2);
+            display: none;
+            transform-origin: center;
+        }
+        
+        /* Success message styling */
+        .error-message.success {
+            color: var(--primary);
+            background: var(--primary-light);
+            border: 1px solid rgba(0, 107, 84, 0.2);
+        }
+
+        .dark-mode .error-message {
+            background: rgba(158, 27, 50, 0.2);
+            border-color: rgba(158, 27, 50, 0.3);
+        }
+
+        .error-message.active {
+            display: block;
+            animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0) rotate(0); }
+            10%, 30%, 50%, 70%, 90% { transform: translateX(-8px) rotate(-2deg); }
+            20%, 40%, 60%, 80% { transform: translateX(8px) rotate(2deg); }
+        }
+        
+        /* Loading animation for login button */
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        
+        /* Success checkmark animation */
+        @keyframes checkmark {
+            0% { transform: scale(0); opacity: 0; }
+            50% { transform: scale(1.2); opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        
+        .success-animation {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .success-animation i {
+            margin-right: 8px;
+            animation: checkmark 0.5s ease-in-out;
+        }
+
+        /* Floating Organic Shapes */
+        .organic-shape {
+            position: absolute;
+            opacity: 0.1;
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        .shape-1 {
+            top: 20%;
+            left: 5%;
+            width: 200px;
+            height: 200px;
+            background: radial-gradient(circle, var(--primary) 0%, transparent 70%);
+            border-radius: 30% 70% 70% 30% / 30% 30% 70% 70%;
+            animation: float 8s ease-in-out infinite;
+        }
+
+        .shape-2 {
+            bottom: 10%;
+            right: 5%;
+            width: 300px;
+            height: 300px;
+            background: radial-gradient(circle, var(--secondary) 0%, transparent 70%);
+            border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
+            animation: float 10s ease-in-out infinite reverse;
+        }
+
+        .shape-3 {
+            top: 60%;
+            left: 30%;
+            width: 150px;
+            height: 150px;
+            background: radial-gradient(circle, var(--accent) 0%, transparent 70%);
+            border-radius: 50% 50% 20% 80% / 60% 40% 60% 40%;
+            animation: float 7s ease-in-out infinite 2s;
+        }
+
+        @keyframes float {
+            0% { transform: translateY(0) rotate(0deg); }
+            50% { transform: translateY(-20px) rotate(5deg); }
+            100% { transform: translateY(0) rotate(0deg); }
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            padding: var(--space-md);
+            font-size: 0.8rem;
+            color: var(--gray);
+            background-color: var(--light);
+            border-top: 1px solid var(--gray-light);
+        }
+
+        .dark-mode .footer {
+            background-color: var(--dark-surface);
+            border-top-color: var(--dark-border);
+            color: var(--gray);
+        }
+
+        /* Responsive Adjustments */
+        @media (max-width: 768px) {
+            .header-container {
+                height: 30vh;
+                min-height: 300px;
+                clip-path: polygon(0 0, 100% 0, 100% 90%, 0 100%);
+            }
+
+            .header-title {
+                font-size: 2rem;
+            }
+
+            .header-subtitle {
+                font-size: 1rem;
+            }
+
+            .main-content {
+                padding: var(--space-lg);
+            }
+
+            .login-card {
+                padding: var(--space-xl);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="dark-mode-toggle" id="dark-mode-toggle"></div>
+
+    <div class="organic-shape shape-1"></div>
+    <div class="organic-shape shape-2"></div>
+    <div class="organic-shape shape-3"></div>
+
+    <div class="header-container">
+        <div class="header-content">
+            <div class="university-logo"></div>
+            <h1 class="header-title">Sri Venkateshwara Engineering College</h1>
+            <p class="header-subtitle">Affiliated to JNTU-H, Suryapet-508213, Telangana</p>
+            <h3>Cashless Fee Management System</h3>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div class="login-container">
+            <div class="login-card">
+                <h2 class="portal-title">Staff Portal</h2>
+                <form id="login-form">
+                    <div class="form-group">
+                        <label for="userId">Email Address</label>
+                        <input type="email" id="userId" name="userId" required autocomplete="username" placeholder="faculty@svec.edu.in">
+                    </div>
+                    <div class="form-group password-container">
+                        <label for="password">Password</label>
+                        <input type="password" id="password" name="password" required autocomplete="current-password" placeholder="••••••••">
+                        <button type="button" class="toggle-password" id="togglePassword"><i class="fas fa-eye"></i></button>
+                    </div>
+                    <div class="form-footer">
+                        <div class="remember-me">
+                            <input type="checkbox" id="rememberMe" name="rememberMe">
+                            <label for="rememberMe">Remember me</label>
+                        </div>
+                     
+                    </div>
+                    <button type="submit" class="login-btn" id="login-button">Login</button>
+                    <p id="login-error" class="error-message"></p>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <p>© 2025 SVEC Fee Management System. All rights reserved.</p>
+    </footer>
+
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Add this for Firebase Phone Authentication -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+
+    
+    <script>
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyCkTBWZvm3gAH1njiSHYEPrZUJmF_DBT4c",
+            authDomain: "cashless-fee-payment.firebaseapp.com",
+            projectId: "cashless-fee-payment",
+            storageBucket: "cashless-fee-payment.appspot.com",
+            messagingSenderId: "528515335884",
+            appId: "1:528515335884:web:3002a89c90844e960b2469"
+        };
+
+        // Initialize Firebase
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+
+        // DOM Elements
+        const loginForm = document.getElementById('login-form');
+        const togglePassword = document.getElementById('togglePassword');
+        const passwordInput = document.getElementById('password');
+        const loginError = document.getElementById('login-error');
+        const rememberMe = document.getElementById('rememberMe');
+        const darkModeToggle = document.getElementById('dark-mode-toggle');
+
+        // Auth state handler
+        auth.onAuthStateChanged((user) => {
+            if (user) {
+                // User is signed in
+                if (window.location.pathname.endsWith('index.html')) {
+                    // Check if OTP verification is available
+                    if (typeof OtpHandler !== 'undefined') {
+                        // Let OTP handler manage the verification and redirection
+                        OtpHandler.checkAndStartVerification(user);
+                    } else {
+                        // If OTP verification is not available, proceed to dashboard
+                        window.location.href = 'staff_dashboard.html';
+                    }
+                }
+            } else {
+                // User is signed out
+                if (!window.location.pathname.endsWith('index.html')) {
+                    window.location.href = 'index.html';
+                }
+            }
+        });
+
+        // Dark Mode Toggle
+        darkModeToggle.addEventListener('click', function() {
+            document.body.classList.toggle('dark-mode');
+            localStorage.setItem('darkMode', document.body.classList.contains('dark-mode'));
+        });
+
+        // Check for saved dark mode preference
+        if (localStorage.getItem('darkMode') === 'true') {
+            document.body.classList.add('dark-mode');
+        }
+
+        // Toggle password visibility
+        togglePassword.addEventListener('click', function() {
+            const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+            passwordInput.setAttribute('type', type);
+            this.textContent = type === 'password' ? '👁' : '🔒';
+        });
+
+        // Check for remembered credentials
+        window.addEventListener('DOMContentLoaded', () => {
+            const rememberedEmail = localStorage.getItem('rememberedEmail');
+            if (rememberedEmail) {
+                document.getElementById('userId').value = rememberedEmail;
+                rememberMe.checked = true;
+            }
+        });
+
+        // Form submission with enhanced error handling and OTP verification
+        loginForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const email = document.getElementById('userId').value.trim();
+            const password = passwordInput.value.trim();
+            const loginButton = document.getElementById('login-button');
+
+            // Clear previous errors
+            loginError.classList.remove('active');
+            loginError.classList.remove('success');
+            loginError.textContent = '';
+            loginForm.style.animation = 'none';
+
+            // Validate inputs
+            if (!email || !password) {
+                showError('Please fill in all fields');
+                return;
+            }
+
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+                showError('Please enter a valid email address');
+                return;
+            }
+
+            if (!email.endsWith('@svec.edu.in')) {
+                showError('Please use your institutional email');
+                return;
+            }
+
+            // Show loading state immediately
+            loginButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Authenticating...';
+            loginButton.style.animation = 'pulse 0.5s infinite';
+            loginButton.disabled = true;
+            
+            // Skip showing authenticating message to speed up response
+            loginError.classList.remove('active');
+            
+            // Set a timeout to show error quickly if authentication is taking too long
+            const authTimeout = setTimeout(() => {
+                console.log('Auth taking too long, preparing UI for response');
+            }, 300);
+
+            // Use a faster Firebase timeout for quicker response
+            firebase.auth.Auth.Persistence.SESSION;
+
+            // Sign in with Firebase Auth - optimized for speed
+            auth.signInWithEmailAndPassword(email, password)
+                .then(userCredential => {
+                    // Clear timeout
+                    clearTimeout(authTimeout);
+
+                    // Show minimal success message and proceed quickly
+                    loginButton.innerHTML = '<i class="fas fa-check"></i> Success!';
+                    loginButton.style.animation = 'none';
+
+                    // Save email if "Remember me" is checked - do this in background
+                    if (rememberMe.checked) {
+                        setTimeout(() => {
+                            localStorage.setItem('rememberedEmail', email);
+                        }, 0);
+                    } else {
+                        setTimeout(() => {
+                            localStorage.removeItem('rememberedEmail');
+                        }, 0);
+                    }
+
+                    // Proceed immediately to next step
+                    if (typeof OtpHandler !== 'undefined') {
+                        // Let OTP handler manage the verification and redirection
+                        OtpHandler.checkAndStartVerification(userCredential.user);
+                    } else {
+                        // If OTP verification is not available, proceed to dashboard
+                        window.location.href = 'staff_dashboard.html';
+                    }
+                })
+                .catch(error => {
+                    // Clear timeout
+                    clearTimeout(authTimeout);
+
+                    // Reset login button immediately
+                    loginButton.innerHTML = 'Login';
+                    loginButton.style.animation = 'none';
+                    loginButton.disabled = false;
+
+                    // Show error message with minimal styling
+                    loginError.innerHTML = '<i class="fas fa-exclamation-circle"></i> Incorrect Username or Password';
+                    loginError.classList.remove('success');
+                    loginError.classList.add('active');
+
+                    // Shake animation - make it faster
+                    loginForm.style.animation = 'shake 0.3s';
+
+                    console.error('Login error:', error.code);
+                });
+        });
+
+    // Add forgot password link if it exists
+    const forgotPassword = document.getElementById('forgotPassword');
+    if (forgotPassword) {
+        forgotPassword.addEventListener('click', function(e) {
+            e.preventDefault();
+            const email = document.getElementById('userId').value.trim();
+
+            if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+                showError('Please enter your institutional email first');
+                return;
+            }
+
+            auth.sendPasswordResetEmail(email)
+                .then(() => {
+                    loginError.textContent = `Password reset link sent to ${email}`;
+                    loginError.style.color = 'var(--primary)';
+                    loginError.style.backgroundColor = 'var(--primary-light)';
+                    loginError.style.borderColor = 'rgba(0, 107, 84, 0.3)';
+                    loginError.classList.add('active');
+                })
+                .catch((error) => {
+                    // Show generic error message
+                    showError('Could not send password reset email');
+                });
+        });
+    }
+
+    // Show error message with shake animation
+    function showError(message) {
+        loginError.innerHTML = `<i class="fas fa-exclamation-circle"></i> ${message}`;
+        loginError.classList.remove('success');
+        loginError.style.color = 'var(--secondary)';
+        loginError.style.backgroundColor = 'var(--secondary-light)';
+        loginError.style.borderColor = 'rgba(158, 27, 50, 0.3)';
+        loginError.classList.add('active');
+
+        // Shake animation
+        loginForm.style.animation = 'none';
+        void loginForm.offsetWidth; // Trigger reflow
+        loginForm.style.animation = 'shake 0.3s';
+    }
+
+    // Function to handle special cases for network errors
+    function isNetworkError(errorCode) {
+        return errorCode === 'auth/network-request-failed';
+    }
+
+    // Parallax effect on scroll
+    window.addEventListener('scroll', function() {
+        const scrollPosition = window.pageYOffset;
+        const header = document.querySelector('.header-container');
+        
+        if (header) {
+            header.style.backgroundPositionY = scrollPosition * 0.5 + 'px';
+        }
+    });
+    </script>
+    
+    <!-- Load OTP verification script after Firebase is initialized -->
+    <script src="otp-verification.js"></script>
+
+</body>
+</html>

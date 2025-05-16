@@ -1,0 +1,477 @@
+/* OTP Verification Styles - Extremely Simple */
+:root {
+    --primary: #006B54;        /* Deep Emerald */
+    --primary-dark: #004D3A;
+    --primary-light: #E0F2EC;
+    --secondary: #9E1B32;      /* Academic Crimson */
+    --secondary-light: #F8E8EB;
+    --accent: #D4AF37;         /* Gold */
+    --accent-light: #F5E9C8;
+    --dark: #1A1A1A;           /* Rich Black */
+    --light: #FDFDFD;          /* Pure White */
+    --gray: #6B7280;
+    --gray-light: #F3F4F6;
+    --danger: #dc3545;
+    --success: #28a745;
+    --warning: #ffc107;
+}
+
+/* Main container for OTP verification */
+.otp-verification-container {
+    position: static;
+    width: 100%;
+    max-width: 400px;
+    margin: 20px auto;
+    background-color: white;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.otp-verification-container.hidden {
+    display: none;
+}
+
+/* Verification page */
+.verification-page {
+    padding: 20px;
+    background-color: white;
+}
+
+.verification-page.hidden {
+    display: none;
+}
+
+/* Form styling */
+.verification-form {
+    margin-bottom: 15px;
+}
+
+/* Form group */
+.form-group {
+    margin-bottom: 15px;
+}
+
+/* Label styling */
+label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+
+/* Button styling */
+button {
+    display: block !important;
+    width: 100%;
+    padding: 10px;
+    margin: 10px 0;
+    background-color: var(--primary);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
+/* Button variants */
+.btn-primary {
+    background-color: var(--primary);
+}
+
+.btn-secondary {
+    background-color: var(--gray);
+}
+
+.verification-btn {
+    display: block !important;
+    width: 100%;
+    margin: 10px 0;
+    padding: 10px;
+    background-color: var(--primary);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-weight: bold;
+}
+
+.back-button {
+    background-color: var(--gray-light);
+    color: var(--dark);
+}
+
+.resend-btn {
+    background-color: transparent;
+    color: var(--primary);
+    text-decoration: underline;
+}
+
+/* Input fields */
+input {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 16px;
+    margin-bottom: 10px;
+    box-sizing: border-box;
+}
+
+/* OTP input styling */
+#otp-input {
+    letter-spacing: 5px;
+    font-size: 20px;
+    text-align: center;
+    font-weight: bold;
+}
+
+/* Message styling */
+.error-message, .success-message {
+    padding: 10px;
+    margin: 10px 0;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.error-message {
+    background-color: #ffebee;
+    color: var(--danger);
+    border: 1px solid var(--danger);
+}
+
+.success-message {
+    background-color: #e8f5e9;
+    color: var(--success);
+    border: 1px solid var(--success);
+}
+
+.error-message.visible, .success-message.visible {
+    display: block;
+}
+
+/* Timer display */
+.timer-container, .otp-timer {
+    text-align: center;
+    margin: 15px 0;
+    padding: 10px;
+    background-color: #f5f5f5;
+    border-radius: 4px;
+}
+
+#otp-countdown {
+    font-size: 18px;
+    font-weight: bold;
+    color: var(--primary);
+}
+
+/* Card header styling */
+.card-header {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.card-header h2 {
+    font-size: 20px;
+    color: var(--primary);
+    margin-bottom: 5px;
+}
+
+.card-header p {
+    color: #666;
+    font-size: 14px;
+}
+
+/* Additional simple styles */
+.verified-phone {
+    padding: 10px;
+    background-color: #f5f5f5;
+    border-radius: 4px;
+    margin-bottom: 10px;
+}
+
+.form-note {
+    font-size: 12px;
+    color: #666;
+    margin-bottom: 10px;
+}
+
+/* Hide elements properly */
+.hidden {
+    display: none !important;
+}
+
+.card-header {
+    text-align: center;
+    margin-bottom: 1.5rem;
+}
+
+.verification-title {
+    font-family: var(--font-display);
+    color: var(--primary);
+    font-size: 1.75rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.verification-subtitle {
+    color: var(--gray);
+    font-size: 0.875rem;
+    margin-bottom: 1.5rem;
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-group label {
+    display: block;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--dark);
+    margin-bottom: 0.5rem;
+}
+
+.form-group input {
+    width: 100%;
+    height: 45px;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    border: 1px solid var(--gray-light);
+    background-color: var(--light);
+    color: var(--dark);
+    font-size: 1rem;
+    transition: all 0.3s ease;
+}
+
+.form-group input:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px var(--primary-light);
+    outline: none;
+}
+
+.form-note {
+    margin-top: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.form-note small {
+    display: block;
+    color: var(--gray);
+    font-size: 0.75rem;
+}
+
+.form-note .note {
+    color: var(--gray);
+    font-size: 0.75rem;
+    font-style: italic;
+}
+
+.verification-btn {
+    width: 100%;
+    height: 45px;
+    background-color: var(--primary);
+    color: var(--light);
+    font-size: 1rem;
+    font-weight: 500;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-bottom: 1rem;
+    transition: all 0.3s ease;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
+.verification-btn:hover {
+    background-color: var(--primary-dark);
+}
+
+.verification-btn:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+.verification-btn span {
+    margin-right: 0.5rem;
+}
+
+.verification-btn i {
+    font-size: 0.875rem;
+}
+
+/* Resend OTP button */
+.resend-btn {
+    background: transparent;
+    border: none;
+    color: var(--primary);
+    font-size: 0.9rem;
+    padding: 8px 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 15px auto 0;
+    transition: all 0.3s ease;
+}
+
+.resend-btn i {
+    margin-right: 6px;
+}
+
+.resend-btn:hover {
+    color: var(--primary-dark);
+    text-decoration: underline;
+}
+
+/* Back button */
+.back-btn {
+    background: transparent;
+    border: 1px solid var(--gray-light);
+    border-radius: var(--radius-sm);
+    color: var(--gray-dark);
+    font-size: 0.9rem;
+    padding: 8px 15px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 15px auto 0;
+    transition: all 0.3s ease;
+    width: auto;
+}
+
+.back-btn i {
+    margin-right: 6px;
+}
+
+.back-btn:hover {
+    background-color: var(--gray-light);
+    color: var(--gray-darker);
+}
+
+.back-button {
+    background: transparent;
+    border: none;
+    color: var(--gray);
+    font-size: 0.875rem;
+    cursor: pointer;
+    display: block;
+    margin: 1rem auto 0;
+    transition: all 0.3s ease;
+    text-align: center;
+}
+
+.back-button:hover {
+    color: var(--primary);
+}
+
+/* Error message */
+.error-message {
+    color: var(--danger);
+    font-size: 0.875rem;
+    margin-top: 0.5rem;
+    text-align: center;
+    display: none;
+    opacity: 0;
+    transition: opacity 0.15s ease-in-out;
+}
+
+.error-message.visible {
+    display: block;
+    opacity: 1;
+    animation: fadeIn 0.15s ease-in-out;
+}
+
+/* OTP sending animations */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-5px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+
+.sending-animation {
+    position: relative;
+    display: inline-block;
+}
+
+.sending-animation::after {
+    content: '';
+    position: absolute;
+    bottom: -3px;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background: var(--primary);
+    animation: loadingBar 2s infinite;
+    transform-origin: left;
+}
+
+@keyframes loadingBar {
+    0% { transform: scaleX(0); }
+    50% { transform: scaleX(1); }
+    100% { transform: scaleX(0); }
+}
+
+/* Speed up the animation */
+.sending-animation::after {
+    animation-duration: 1s !important;
+}
+
+.success-animation {
+    animation: pulse 0.5s ease-in-out;
+}
+
+.verified-phone {
+    background-color: var(--primary-light);
+    border-radius: 4px;
+    padding: 0.75rem 1rem;
+    display: flex;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.verified-phone i {
+    color: var(--success);
+    font-size: 1rem;
+    margin-right: 0.5rem;
+}
+
+.verified-phone span {
+    font-size: 1rem;
+    color: var(--dark);
+    font-weight: 500;
+}
+
+.otp-timer {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 0.5rem;
+    color: var(--gray);
+    font-size: 0.75rem;
+}
+
+.otp-timer i {
+    margin-right: 0.25rem;
+    color: var(--warning);
+}
+
+/* Shake animation for error */
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+    20%, 40%, 60%, 80% { transform: translateX(5px); }
+}
+
+.shake {
+    animation: shake 0.5s ease-in-out;
+}
